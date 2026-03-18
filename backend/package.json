@@ -4,7 +4,13 @@
   "type": "module",
   "scripts": {
     "start": "node src/index.js",
-    "dev":   "node --watch src/index.js"
+    "dev": "node --watch src/index.js"
   },
-  "engines": { "node": ">=18.0.0" }
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.99.2",
+    "dotenv": "^17.3.1"
+  }
 }

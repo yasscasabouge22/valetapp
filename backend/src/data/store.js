@@ -1,43 +1,63 @@
+import { createClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
 import crypto from 'crypto';
+dotenv.config();
 
-// ─── USERS ─────────────────────────────────────────────────
-export const users = [
-  // Admins
-  { id: 'admin1', role: 'admin', name: 'Admin Principal', email: 'admin@valetapp.ma', password: 'admin123', avatar: 'AP', phone: '+212600000000' },
-  // Managers
-  { id: 'mgr1', role: 'manager', name: 'Ahmed Mansouri', email: 'ahmed@valetapp.ma', password: 'mgr123', avatar: 'AM', phone: '+212600000001', managerId: 'mgr1' },
-  { id: 'mgr2', role: 'manager', name: 'Laila Idrissi',  email: 'laila@valetapp.ma',  password: 'mgr123', avatar: 'LI', phone: '+212600000002', managerId: 'mgr2' },
-  // Valets
-  { id: "v1", role: "valet", name: "Mohammed Alami",  phone: "+212611223344", avatar: "MA", matricule: "V-2026-001", managerId: "mgr1", status: "online" },
-  { id: "v2", role: "valet", name: "Fatima Zahra",    phone: "+212622334455", avatar: "FZ", matricule: "V-2026-002", managerId: "mgr1", status: "online" },
-  { id: "v3", role: "valet", name: "Youssef Bennani", phone: "+212633445566", avatar: "YB", matricule: "V-2026-003", managerId: "mgr2", status: "offline" },
-  { id: "v4", role: "valet", name: "Sara El Fassi",   phone: "+212644556677", avatar: "SE", matricule: "V-2026-004", managerId: "mgr2", status: "online" },
-];
-
-// ─── QR CARDS ──────────────────────────────────────────────
-export const qrCards = Array.from({ length: 20 }, (_, i) => ({
-  id: `QR-${String(i+1).padStart(3,'0')}`,
-  status: 'available',
-  lastUsed: null,
-  createdAt: new Date().toISOString(),
-}));
-
-// ─── MISSIONS ──────────────────────────────────────────────
-export const missions = [];
-
-// ─── OTP & SESSIONS ────────────────────────────────────────
-export const otpStore  = new Map();
-export const sessions  = new Map(); // token → userId
+export const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_KEY
+);
 
 // ─── HELPERS ───────────────────────────────────────────────
 export function uid()   { return crypto.randomUUID().replace(/-/g,'').slice(0,12); }
 export function token() { return crypto.randomBytes(32).toString('hex'); }
 export function otp()   { return String(Math.floor(100000 + Math.random()*900000)); }
 
-export function userByToken(t) {
-  const id = sessions.get(t);
-  return id ? users.find(u => u.id === id) || null : null;
+// ─── USERS ─────────────────────────────────────────────────
+export async function getUsers()          { const { data } = await supabase.from('users').select('*'); return data || []; }
+export async function getUserById(id)     { const { data } = await supabase.from('users').select('*').eq('id', id).single(); return data; }
+export async function getUserByPhone(p)   { const { data } = await supabase.from('users').select('*').eq('phone', p).single(); return data; }
+export async function getUserByEmail(e)   { const { data } = await supabase.from('users').select('*').eq('email', e).single(); return data; }
+export async function createUser(u)       { const { data } = await supabase.from('users').insert(u).select().single(); return data; }
+export async function updateUser(id, u)   { const { data } = await supabase.from('users').update(u).eq('id', id).select().single(); return data; }
+export async function deleteUser(id)      { await supabase.from('users').delete().eq('id', id); }
+
+// ─── SESSIONS ──────────────────────────────────────────────
+export async function createSession(tok, userId) { await supabase.from('sessions').insert({ token: tok, user_id: userId }); }
+export async function deleteSession(tok)          { await supabase.from('sessions').delete().eq('token', tok); }
+export async function getUserByToken(tok) {
+  const { data: session } = await supabase.from('sessions').select('user_id').eq('token', tok).single();
+  if (!session) return null;
+  return getUserById(session.user_id);
 }
-export function missionByQR(qrId) {
-  return missions.find(m => m.qrId === qrId && m.status !== 'done') || null;
+
+// ─── OTP ───────────────────────────────────────────────────
+export async function saveOTP(phone, code, userId) {
+  const expires_at = new Date(Date.now() + 5*60*1000).toISOString();
+  await supabase.from('otps').upsert({ phone, code, user_id: userId, expires_at });
 }
+export async function getOTP(phone) {
+  const { data } = await supabase.from('otps').select('*').eq('phone', phone).single();
+  return data;
+}
+export async function deleteOTP(phone) { await supabase.from('otps').delete().eq('phone', phone); }
+
+// ─── QR CARDS ──────────────────────────────────────────────
+export async function getQRCards()       { const { data } = await supabase.from('qr_cards').select('*').order('id'); return data || []; }
+export async function getQRCard(id)      { const { data } = await supabase.from('qr_cards').select('*').eq('id', id).single(); return data; }
+export async function updateQRCard(id,u) { const { data } = await supabase.from('qr_cards').update(u).eq('id', id).select().single(); return data; }
+export async function createQRCards(ids) {
+  const cards = ids.map(id => ({ id, status: 'available' }));
+  const { data } = await supabase.from('qr_cards').insert(cards).select();
+  return data;
+}
+
+// ─── MISSIONS ──────────────────────────────────────────────
+export async function getMissions()        { const { data } = await supabase.from('missions').select('*').order('created_at', { ascending: false }); return data || []; }
+export async function getMissionById(id)   { const { data } = await supabase.from('missions').select('*').eq('id', id).single(); return data; }
+export async function getMissionByQR(qrId) {
+  const { data } = await supabase.from('missions').select('*').eq('qr_id', qrId).neq('status', 'done').single();
+  return data;
+}
+export async function createMission(m)     { const { data } = await supabase.from('missions').insert(m).select().single(); return data; }
+export async function updateMission(id, u) { const { data } = await supabase.from('missions').update({ ...u, updated_at: new Date().toISOString() }).eq('id', id).select().single(); return data; }
