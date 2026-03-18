@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const isProduction = process.env.NODE_ENV === 'production'
+
 export default defineConfig({
   plugins: [react()],
   server: {
@@ -10,11 +12,9 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
-        // Important pour SSE / EventSource
         ws: false,
         configure: (proxy) => {
           proxy.on('proxyReq', (proxyReq) => {
-            // Désactiver la compression pour SSE
             proxyReq.setHeader('Accept-Encoding', 'identity');
           });
         },
@@ -22,7 +22,7 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: '../backend/public',
+    outDir: isProduction ? 'dist' : '../backend/public',
     emptyOutDir: true,
   }
 })
