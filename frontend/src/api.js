@@ -1,7 +1,5 @@
 // Détecte automatiquement le host — fonctionne sur Mac ET sur téléphone du même réseau
-const BACKEND_PORT = 3001;
-const BASE = import.meta.env.VITE_API_URL
-  || `http://${window.location.hostname}:${BACKEND_PORT}`;
+const BASE = import.meta.env.VITE_API_URL || 'https://valetapp-production.up.railway.app';
 
 // SSE pointe directement vers le backend (même host, port 3001)
 // Pas de proxy Vite = pas de problème CORS ni de timeout
