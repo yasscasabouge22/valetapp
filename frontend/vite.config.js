@@ -3,6 +3,9 @@ import react from "@vitejs/plugin-react"
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __API_URL__: JSON.stringify("https://valetapp-production.up.railway.app")
+  },
   server: {
     port: 5173,
     host: true,
