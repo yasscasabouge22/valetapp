@@ -1,5 +1,5 @@
 // Détecte automatiquement le host — fonctionne sur Mac ET sur téléphone du même réseau
-const BASE = '';  // Vercel proxy redirige /api/* vers Railway
+const BASE = 'https://valetapp-production.up.railway.app';
 
 // SSE pointe directement vers le backend (même host, port 3001)
 // Pas de proxy Vite = pas de problème CORS ni de timeout
